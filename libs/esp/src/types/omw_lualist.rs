@@ -55,7 +55,9 @@ impl Load for ScriptConfigList {
                 }
                 b"LUAF" => {
                     let size: u32 = stream.load()?;
-                    assert!(size % 4 == 0, "Incorrect LUAF Size!");
+                    if size < 4 || !size.is_multiple_of(4) {
+                        Reader::error(format!("Incorrect LUAF Size: {size}"))?;
+                    }
 
                     script_config.flags = stream.load()?;
 
@@ -66,7 +68,7 @@ impl Load for ScriptConfigList {
                 }
                 b"LUAI" => {
                     let mut per_instance = PerInstanceConfig::default();
-                    stream.skip(size_of::<u32>() as u32)?;
+                    stream.skip(4)?; // the subrecord's size, always 9
 
                     let attach = stream.load::<u8>()?;
                     per_instance.attach = attach != 0;
@@ -106,7 +108,7 @@ impl Load for ScriptConfigList {
                                     .records
                                     .last_mut()
                                     .expect("No record found in scriptConfig!")
-                                    .data = data
+                                    .data = data;
                             }
                             _ => {
                                 Reader::error(format!(
@@ -127,7 +129,7 @@ impl Load for ScriptConfigList {
         }
 
         if script_config != ScriptConfig::default() {
-            this.scripts.push(std::mem::take(&mut script_config))
+            this.scripts.push(std::mem::take(&mut script_config));
         }
 
         Ok(this)
@@ -142,27 +144,27 @@ impl Save for ScriptConfigList {
             stream.save_string_without_null_terminator(&script_config.path)?;
 
             stream.save(b"LUAF")?;
-            let length = 4 + (4 * script_config.types.len());
-            stream.save(&(length as u32))?;
+            let length = u32::try_from(4 + (4 * script_config.types.len())).map_err(io::Error::other)?;
+            stream.save(&length)?;
             stream.save(&script_config.flags)?;
 
             for attach_type in &script_config.types {
-                stream.save_vec(attach_type.as_bytes().into())?;
+                stream.save_vec(attach_type.as_bytes())?;
             }
 
-            if script_config.init_data.len() > 0 {
+            if !script_config.init_data.is_empty() {
                 stream.save(b"LUAD")?;
                 stream.save(&script_config.init_data)?;
             }
 
             for record in &script_config.records {
                 stream.save(b"LUAR")?;
-                let length = record.id.len() as u32;
+                let length = u32::try_from(record.id.len()).map_err(io::Error::other)?;
                 stream.save(&(length + 1))?;
                 stream.save_as::<u8>(record.attach)?;
-                stream.save_bytes(&record.id[..].as_bytes())?;
+                stream.save_bytes(record.id.as_bytes())?;
 
-                if record.data.len() > 0 {
+                if !record.data.is_empty() {
                     stream.save(b"LUAD")?;
                     stream.save(&record.data)?;
                 }
@@ -177,7 +179,7 @@ impl Save for ScriptConfigList {
                 stream.save(&instance.ref_idx)?;
                 stream.save(&instance.mast_idx)?;
 
-                if instance.data.len() > 0 {
+                if !instance.data.is_empty() {
                     stream.save(b"LUAD")?;
                     stream.save(&instance.data)?;
                 }
