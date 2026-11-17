@@ -14,8 +14,8 @@ bytes_io = { path = "../bytes_io" }
 cow-utils = "^0.1"
 derive_more = { version = "^2.0", features = ["deref", "deref_mut", "from", "into" ] }
 esp_macros = { path = "../esp_macros" }
-glam = "^0.30"
-hashbrown = { version = "^0.16", features = ["rayon"] }
+glam = "^0.34"
+hashbrown = { version = "^0.17", features = ["rayon"] }
 itoa = "^1.0"
 rayon = "^1.11"
 smart-default = "^0.7"

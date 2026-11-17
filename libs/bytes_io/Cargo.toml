@@ -12,8 +12,8 @@ bytemuck = { version = "^1.24", features = ["derive", "extern_crate_alloc", "min
 bytes_io_macros = { path = "../bytes_io_macros" }
 castaway = "^0.2"
 encoding_rs = "^0.8"
-glam = { version = "^0.30", features = ["bytemuck"], optional = true }
-hashbrown = { version = "^0.16", features = ["rayon"] }
+glam = { version = "^0.34", features = ["bytemuck"], optional = true }
+hashbrown = { version = "^0.17", features = ["rayon"] }
 memchr = "^2.7"
 smart-default = "^0.7"
 half = { version = "^2.7", features = ["bytemuck", "nightly"] }
