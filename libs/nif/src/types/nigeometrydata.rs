@@ -25,9 +25,11 @@ impl Load for NiGeometryData {
         let has_vertex_colors = stream.load::<u32>()? != 0;
         let num_vertex_colors = if has_vertex_colors { num_vertices } else { 0 };
         let vertex_colors = stream.load_vec(num_vertex_colors)?;
-        let num_uv_sets = stream.load_as::<u16, usize>()?;
-        let has_uv_sets = stream.load::<u32>()? != 0;
-        let num_uv_sets = if has_uv_sets { num_uv_sets } else { 0 };
+        // The UV sets are as many as `num_uv_sets` says (its low 6 bits, as nif.xml reads them),
+        // whatever `has_uv_sets` says: exporters write meshes with UV sets and the flag 0, and
+        // skipping them read the texture coordinates as the triangles that follow.
+        let num_uv_sets = stream.load_as::<u16, usize>()? & 63;
+        let _has_uv_sets = stream.load::<u32>()? != 0;
         let uv_sets = stream.load_vec(num_vertices * num_uv_sets)?;
         Ok(Self {
             base,

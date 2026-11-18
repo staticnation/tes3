@@ -32,7 +32,10 @@ impl Load for LeveledCreature {
                 }
                 b"INDX" => {
                     stream.expect(4u32)?;
-                    this.creatures.reserve(stream.load_as::<u32, usize>()?);
+                    // A hint only: each entry is a CNAM and an INTV subrecord (8-byte headers each),
+                    // so the reserve stays within what the record could hold.
+                    let count = stream.load_as::<u32, usize>()?;
+                    this.creatures.reserve(count.min(stream.remaining() / 16));
                 }
                 b"CNAM" => {
                     this.creatures.push(default());

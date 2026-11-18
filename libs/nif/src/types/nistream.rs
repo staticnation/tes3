@@ -69,9 +69,10 @@ impl NiStream {
             return Reader::error("Invalid NIF Version");
         }
 
-        // allocate objects
+        // allocate objects (each takes at least its 4-byte type name length, so a count
+        // read from a damaged file reserves no more than the data could hold)
         let num_objects = stream.load_as::<u32, usize>()?;
-        self.objects.reserve(num_objects);
+        self.objects.reserve(num_objects.min(stream.remaining() / 4));
 
         // populate objects
         for _ in 0..num_objects {
@@ -80,7 +81,7 @@ impl NiStream {
 
         // allocate roots
         let num_roots = stream.load_as::<u32, usize>()?;
-        self.roots.reserve(num_roots);
+        self.roots.reserve(num_roots.min(stream.remaining() / 4));
 
         // populate roots
         for _ in 0..num_roots {

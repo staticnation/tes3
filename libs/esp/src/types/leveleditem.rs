@@ -32,7 +32,10 @@ impl Load for LeveledItem {
                 }
                 b"INDX" => {
                     stream.expect(4u32)?;
-                    this.items.reserve(stream.load_as::<u32, usize>()?);
+                    // A hint only: each entry is an INAM and an INTV subrecord (8-byte headers each),
+                    // so the reserve stays within what the record could hold.
+                    let count = stream.load_as::<u32, usize>()?;
+                    this.items.reserve(count.min(stream.remaining() / 16));
                 }
                 b"INAM" => {
                     this.items.push(default());
