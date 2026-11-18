@@ -4,7 +4,12 @@
 use nif::NiStream;
 
 fn file(num_objects: u32) -> Vec<u8> {
-    [&NiStream::HEADER[..], &NiStream::VERSION.to_le_bytes(), &num_objects.to_le_bytes()].concat()
+    [
+        &NiStream::HEADER[..],
+        &NiStream::VERSION.to_le_bytes(),
+        &num_objects.to_le_bytes(),
+    ]
+    .concat()
 }
 
 #[test]
