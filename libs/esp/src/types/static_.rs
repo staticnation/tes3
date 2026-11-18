@@ -29,7 +29,7 @@ impl Load for Static {
                     this.flags.insert(ObjectFlags::DELETED);
                 }
                 _ => {
-                    Reader::error(format!("Unexpected Tag: {}::{}", this.tag_str(), tag.to_str_lossy()))?;
+                    stream.unexpected_tag(this.tag_str(), &tag)?;
                 }
             }
         }

@@ -100,7 +100,7 @@ impl Load for Reference {
                     break;
                 }
                 _ => {
-                    Reader::error(format!("Unexpected Tag: REFR::{}", tag.to_str_lossy()))?;
+                    stream.unexpected_tag("REFR", &tag)?;
                 }
             }
         }

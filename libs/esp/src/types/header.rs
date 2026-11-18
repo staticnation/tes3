@@ -44,7 +44,7 @@ impl Load for Header {
                     this.masters.push((master_name, master_size));
                 }
                 _ => {
-                    Reader::error(format!("Unexpected Tag: {}::{}", this.tag_str(), tag.to_str_lossy()))?;
+                    stream.unexpected_tag(this.tag_str(), &tag)?;
                 }
             }
         }

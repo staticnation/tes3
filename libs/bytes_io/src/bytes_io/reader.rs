@@ -16,6 +16,10 @@ pub struct Reader<'a> {
     pub cursor: io::Cursor<&'a [u8]>,
     #[default(WINDOWS_1252)]
     pub encoding: &'static Encoding,
+    /// When set, a subrecord a record type does not know is stepped over (its data skipped)
+    /// instead of failing the whole record (`unexpected_tag`). Off by default: a reader that
+    /// must round-trip every byte still refuses what it would drop on save.
+    pub lenient: bool,
 }
 
 impl<'a> Reader<'a> {
@@ -49,7 +53,39 @@ impl<'a> Reader<'a> {
             .map_or_else(|_| Self::error("Invalid 'Load As' Conversion"), |value| Ok(value))
     }
 
+    /// The bytes left to read.
+    pub fn remaining(&self) -> usize {
+        let len = self.cursor.get_ref().len() as u64;
+        len.saturating_sub(self.cursor.position()).try_into().unwrap_or(usize::MAX)
+    }
+
+    /// Fails when `len` items of `size` bytes cannot be in what is left of the data: a length
+    /// read from a corrupt file is refused before anything is allocated for it (a huge one
+    /// made `zeroed_vec` panic, or `vec!` abort the process).
+    fn check_len(&self, len: usize, size: usize) -> io::Result<()> {
+        match len.checked_mul(size) {
+            Some(n) if n <= self.remaining() => Ok(()),
+            _ => Self::error(format!(
+                "Length out of bounds: {len} x {size} bytes at offset {} with {} left",
+                self.cursor.position(),
+                self.remaining()
+            )),
+        }
+    }
+
+    /// A subrecord `tag` the record type `owner` does not know: an error, or with `lenient`
+    /// its data skipped (the subrecord's size follows its tag).
+    pub fn unexpected_tag(&mut self, owner: &str, tag: &[u8; 4]) -> io::Result<()> {
+        if self.lenient {
+            let size: u32 = self.load()?;
+            self.skip(size)?;
+            return Ok(());
+        }
+        Self::error(format!("Unexpected Tag: {}::{}", owner, String::from_utf8_lossy(tag)))
+    }
+
     pub fn load_bytes(&mut self, len: usize) -> io::Result<Vec<u8>> {
+        self.check_len(len, 1)?;
         let mut bytes = vec![0; len];
         self.cursor.read_exact(&mut bytes)?;
         Ok(bytes)
@@ -90,6 +126,7 @@ impl<'a> Reader<'a> {
         len.try_into().map_or_else(
             |_| Self::error("Invalid integer length"),
             |i| {
+                self.check_len(i, size_of::<P>())?;
                 let mut this = zeroed_vec(i);
                 self.read_exact(cast_slice_mut(&mut this))?;
                 Ok(this)
